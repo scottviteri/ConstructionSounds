@@ -1,0 +1,120 @@
+
+#+BEGIN_SRC python :session
+  import soundfile as sf
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import sounddevice as sd
+  import scipy.signal
+  import scipy.fft
+
+  f = sf.SoundFile("./construction.wav")
+  SAMPLERATE = 44100
+  F = SAMPLERATE
+  sec_to_sample = lambda secs: secs * SAMPLERATE
+  def to_string(l): return '(list ' + ' '.join(map(str,pks)) + ')'
+  test = np.array(f.read())
+#+END_SRC
+
+#+RESULTS:
+
+#+begin_src python :session :results value file
+  plt.figure()
+  plt.plot(test)
+  peaks = scipy.signal.find_peaks(test,distance=100000)[0]
+  plt.plot(peaks,test[peaks],'r+')
+  plt.savefig("sound.png")
+  "./sound.png"
+#+end_src
+
+#+RESULTS:
+[[file:./sound.png]]
+
+#+begin_src python :session
+  sd.play(test)
+#+end_src
+
+#+RESULTS:
+: None
+
+#+begin_src python :session :results output
+  a,b,c = scipy.signal.spectrogram(test,nperseg=1000,nfft=2000)
+  #test_ft[-1000000:] = 0
+  #filt = np.abs(scipy.fft.ifft(test_ft))
+  bang = c[14:25,:50]
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session :results value file
+  plt.figure()
+  plt.pcolormesh(np.log(c[:200,:]))
+  plt.savefig("spec.png")
+  "./spec.png"
+#+end_src
+
+#+Results:
+[[file:./spec.png]]
+
+#+begin_src python :session :results value file
+  plt.figure()
+  plt.plot(np.sum(c[:200,:10]**2,axis=0))
+  plt.savefig("tsra.png")
+  "./tsra.png"
+#+end_src
+
+#+Results:
+[[file:./tsra.png]]
+
+
+
+#+begin_src python :session
+ hit = test[82000:94000]
+ def inner_prod(l1,l2): return np.sum(l1*l2)
+ def rolling_inner_prod(comparison, signal):
+     return [inner_prod(comparison, signal[i:i+len(comparison)]) for i in range(len(signal)-len(comparison))]
+ prod = rolling_inner_prod(hit, test)
+#+end_src
+
+#+RESULTS:
+#+begin_src python :session :results value file
+  def lpf(data, cutoff):
+     a = scipy.signal.stft(test,nperseg=100)
+     b = a[2].copy()
+     b[cutoff:,:] = 0
+     c = scipy.signal.istft(b,nperseg=100)[1]
+     return c
+  def smooth(data):
+     g = scipy.signal.gaussian(8000,std=4000)/1000
+     return np.convolve(data, g)
+  # the fourier transform changes depending on length of signal
+  #  because the cutoff is changing
+  # so did istft instead, but might as well just use gaussian blur
+  # wider is like repeated convolution
+  #test2 = smooth(np.abs(test))
+  plt.figure()
+  #plt.plot(test2[int(.7*F):int(1.1*F)])
+  plt.plot(test2[:3*F])
+  plt.savefig('test2.png')
+  'test2.png'
+#+end_src
+
+#+RESULTS:
+[[file:test2.png]]
+
+#+begin_src python :session
+  test3 = np.convolve(np.abs(test[2][30869:48510]), np.flip(np.abs(test2)))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session :results value file
+  plt.figure()
+  plt.plot(test2)
+  pks = scipy.signal.find_peaks(test2,prominence=.1)[0]
+  plt.plot(pks,test2[pks],'r+')
+  plt.savefig("t3.png")
+  "./t3.png"
+#+end_src
+
+#+RESULTS:
+[[file:./t3.png]]
